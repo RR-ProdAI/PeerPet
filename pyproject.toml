@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "peerpet"
+version = "0.0.1"
+description = "A digital pet that lives in the background of your terminal."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Rishi" },
+    { name = "Ranjeet" },
+]
+# MVP is intentionally zero-dependency (stdlib pty / socket / sqlite3).
+# `tomli` is only needed for TOML config on Python < 3.11.
+dependencies = [
+    "tomli; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "ruff>=0.5",
+]
+# "cool features later" — opt-in, needs API keys. Not part of the MVP.
+honcho = [
+    "honcho-ai",
+]
+
+[project.scripts]
+peerpet = "peerpet.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["peerpet"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
