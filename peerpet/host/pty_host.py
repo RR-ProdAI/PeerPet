@@ -36,6 +36,7 @@ import io
 import os
 import pty
 import select
+import signal
 import struct
 import termios
 import time
@@ -51,6 +52,20 @@ from peerpet.pet import behavior
 # Sequences that move into / wipe the whole screen (incl. the pet strip).
 _CLEAR_SEQUENCES = (b"\x1b[2J", b"\x1b[3J", b"\x1bc")
 PET_ROW = 1  # the pet lives on the first reserved row
+
+# Signals that should end the host *cleanly* (reset the terminal). SIGINT is
+# normally swallowed by raw mode (Ctrl-C goes to the child shell), so this mainly
+# catches `pkill`/SIGTERM, a closed window (SIGHUP), and an explicit `kill -INT`.
+# SIGKILL is uncatchable — recover from that with `reset`.
+_EXIT_SIGNALS = (signal.SIGTERM, signal.SIGHUP, signal.SIGINT)
+
+
+class _Terminated(Exception):
+    """Raised from a signal handler to unwind into the host's cleanup path."""
+
+
+def _raise_terminated(signum, frame):
+    raise _Terminated(signum)
 
 
 def _terminal_size(fd: int) -> tuple[int, int]:
@@ -127,9 +142,19 @@ def run(config: Config | None = None) -> int:
 
     atexit.register(cleanup)
 
+    def terminate_child() -> None:
+        """Hang up the shell so it exits, then it gets reaped below."""
+        try:
+            os.kill(pid, signal.SIGHUP)
+        except ProcessLookupError:
+            pass
+
     tick = 0
     try:
         tty.setraw(stdin_fd)
+        # Catch signals so we always reset the terminal (hard-constraint #2).
+        for sig in _EXIT_SIGNALS:
+            signal.signal(sig, _raise_terminated)
         _set_pty_size(master_fd, rows - pet_rows, cols)
         # TODO(#19): shift existing screen content down by pet_rows so the strip
         # is carved cleanly on startup; today the pet overlaps prior content
@@ -178,8 +203,11 @@ def run(config: Config | None = None) -> int:
                 behavior.tick(state)
                 draw_pet(tick)
                 next_frame = time.monotonic() + interval
+    except _Terminated:
+        pass  # signal received — fall through to clean teardown
     finally:
         cleanup()
+        terminate_child()
 
     _, status = os.waitpid(pid, 0)
     return os.waitstatus_to_exitcode(status)
