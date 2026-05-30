@@ -74,6 +74,37 @@ Co-Authored-By: Ranjeet <...>
 Use issues to track work and split ownership. Reference them from PRs
 (`Closes #N`) so they close on merge.
 
+## Versioning & cutting a release
+
+PeerPet uses [Semantic Versioning](https://semver.org). Pre-1.0 (`0.x`): minor =
+features (and any breaking changes), patch = fixes. The version lives in **one
+place**, `peerpet/__init__.py` (`__version__`); `pyproject.toml` reads it
+dynamically, so never hardcode a version anywhere else.
+
+Every PR that changes behavior adds a bullet under **`[Unreleased]`** in
+[`CHANGELOG.md`](./CHANGELOG.md).
+
+To cut a release (normal PR flow — no direct commits to `main`):
+
+```bash
+# 1. On a branch: bump the version and roll the changelog
+#    - edit peerpet/__init__.py        -> __version__ = "0.1.0"
+#    - in CHANGELOG.md, rename [Unreleased] -> [0.1.0] - YYYY-MM-DD,
+#      then add a fresh empty [Unreleased] section above it
+ruff format . && ruff check . && pytest -q
+# 2. PR -> green CI -> review -> merge to main
+
+# 3. Tag the merge commit on main and push the tag
+git checkout main && git pull
+git tag v0.1.0          # must equal __version__ (the workflow checks this)
+git push origin v0.1.0
+```
+
+Pushing the `v*` tag fires [`.github/workflows/release.yml`](./.github/workflows/release.yml),
+which builds the wheel + sdist and publishes a GitHub Release with the matching
+CHANGELOG section as the notes. (Not on PyPI yet — install stays
+`pipx install git+https://github.com/RR-ProdAI/PeerPet.git`.)
+
 ## Admin override (use sparingly)
 
 Both Rishi and Ranjeet are repo admins. By deliberate choice, `main` protection
