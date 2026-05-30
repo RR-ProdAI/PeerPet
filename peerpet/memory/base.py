@@ -1,10 +1,12 @@
-"""The Memory interface — the one seam we must not let leak.
+"""The Memory interface — the one persistence seam.
 
 ALL persistence goes through this interface. Never import a concrete backend
-(`local.LocalMemory`, future `honcho_backend`) outside the `memory` package;
-depend on `Memory` and let `get_memory()` pick the backend. This is what makes
-the Honcho upgrade a drop-in: the per-user `memory_key` maps 1:1 to a Honcho
-peer.
+(`local.LocalMemory`) outside the `memory` package; depend on `Memory` and let
+`get_memory()` pick the backend. Keeping this boundary clean means we can swap
+the storage layer (e.g. a different DB) without touching the rest of the pet.
+
+NOTE: this is product persistence only — plain local storage, no LLM, no
+external service. Honcho/Hermes are dev-workflow tools, not part of PeerPet.
 """
 
 from __future__ import annotations
@@ -16,10 +18,9 @@ from peerpet.pet.state import PetState
 
 
 def current_memory_key() -> str:
-    """The per-user identity. Lightweight and unique per user (see AGENTS.md).
+    """The per-user identity: lightweight and unique per user (see AGENTS.md).
 
-    Today this is the OS user. When the Honcho backend lands, this same string
-    becomes the Honcho peer id — no other code needs to change.
+    This is the OS user — each person gets their own pet, isolated in storage.
     """
     return getpass.getuser()
 
@@ -38,7 +39,7 @@ class Memory(ABC):
     @abstractmethod
     def record_event(self, key: str, kind: str, payload: dict | None = None) -> None:
         """Append an interaction event (feed/play/...). Cheap append-only log;
-        later powers stats and feeds the Honcho memory backend.
+        powers stats like streaks and play history.
         """
 
     def close(self) -> None:  # noqa: B027 — optional hook, backends may override
@@ -46,10 +47,9 @@ class Memory(ABC):
 
 
 def get_memory() -> Memory:
-    """Factory: returns the configured backend.
+    """Factory: returns the storage backend (local SQLite).
 
-    MVP always returns the local SQLite backend. When Honcho is enabled via
-    config, this is the single place that will branch.
+    The single place to branch if we ever add another backend.
     """
     from peerpet.memory.local import LocalMemory
 

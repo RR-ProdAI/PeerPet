@@ -14,6 +14,11 @@ usable**. You interact with it through out-of-band commands (`peerpet feed`,
 **North star:** the pet is delightful and *invisible when you need the terminal*.
 If a feature makes the shell feel laggy, janky, or "taken over," it's wrong.
 
+**Scope (read this):** PeerPet the product is a **simple, deterministic pet — no
+LLM, no AI, no external services, no network.** Honcho and Hermes are
+**dev-workflow tools for us, the authors** (see "Dev workflow & tooling"); they
+are NOT dependencies of the shipped pet. Don't add AI to the product.
+
 ## Hard constraints (do not violate)
 
 1. **The terminal must stay fully usable.** Typing, scrolling, resizing, running
@@ -21,8 +26,8 @@ If a feature makes the shell feel laggy, janky, or "taken over," it's wrong.
    the other way around.
 2. **Leave the terminal clean on exit.** Reset the DECSTBM scroll region and
    clear the pet rows in *all* exit paths, including signals and crashes.
-3. **No API keys required for the MVP.** Pet behavior is deterministic Python.
-   LLM/Honcho features are opt-in and must degrade gracefully when absent.
+3. **No AI, no network, no keys in the product.** Pet behavior is deterministic
+   Python. No LLM calls, no API keys, no external services — ever.
 4. **Memory is per-user and lightweight.** Local store keyed by OS user. No
    network calls in the hot path.
 
@@ -50,9 +55,8 @@ peerpet/
     ipc.py           unix-socket server (host side) + client (cli side)
     commands.py      feed / play / pet handlers
   memory/
-    base.py          Memory interface (get/set per-user facts + events)
-    local.py         MVP backend: SQLite at ~/.local/share/peerpet/<user>.db
-    honcho_backend.py  LATER: one Honcho peer per OS user (same interface)
+    base.py          Memory interface (get/set per-user state + events)
+    local.py         SQLite backend at ~/.local/share/peerpet/<user>.db
   config.py          loads ~/.config/peerpet/config.toml
 ```
 
@@ -66,11 +70,11 @@ peerpet/
   `rows - PET_ROWS` → redraw.
 
 ### Memory abstraction (important)
-All persistence goes through `memory/base.py:Memory`. The MVP implementation is
-`local.py` (SQLite, one file per OS user). **Never** import a concrete backend
-outside `memory/`; depend on the interface. Honcho lands later as a drop-in
-backend where `memory_key == OS user → Honcho peer`. This is the one seam we
-must not let leak.
+All persistence goes through `memory/base.py:Memory`. The implementation is
+`local.py` (SQLite, one row per OS user). **Never** import a concrete backend
+outside `memory/`; depend on the interface. This boundary stays clean so we can
+swap storage later without touching the pet — but it's plain local storage, no
+external service.
 
 ## Conventions
 
@@ -113,14 +117,27 @@ ruff format . && ruff check .
 - Both authors use Claude Code (Claude Pro). This file is the shared brief — if
   you find yourself re-explaining context to the assistant, put it here instead.
 
-## Roadmap
+## Dev workflow & tooling (NOT part of the product)
+
+These help *us build* PeerPet; they never ship inside it and add no runtime deps.
+
+- **Hermes** → this `AGENTS.md` convention. It's the shared contract our coding
+  assistants (Claude Code / Hermes) read. Keep it accurate; that's its whole job.
+- **Honcho** → *optional* shared memory for our coding assistants, so context and
+  preferences can sync between Rishi's and Ranjeet's sessions. Lives in dev
+  tooling, outside the package — **never** imported by `peerpet/`.
+
+If you ever feel tempted to give the *pet* an LLM or call Honcho/Hermes from
+product code: don't. That's a different project. The pet stays deterministic.
+
+## Roadmap (product)
 
 - **MVP:** PTY host + reserved-region renderer; one pet with hunger/mood; `feed`
   and `play` over IPC; SQLite per-user memory; clean exit + resize handling.
 - **Next:** richer animations & moods, idle behaviors, config (pet name, colors,
   position), persistence of streaks/level.
-- **Later (needs keys):** Honcho memory backend (per-user peer, async insights);
-  optional LLM-driven personality. Both strictly opt-in.
+- **Later:** more pets/species, mini-interactions, themes — all still pure,
+  deterministic, offline.
 
 ## Gotchas
 

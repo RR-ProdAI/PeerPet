@@ -12,8 +12,9 @@ authors = [
     { name = "Rishi" },
     { name = "Ranjeet" },
 ]
-# MVP is intentionally zero-dependency (stdlib pty / socket / sqlite3).
-# `tomli` is only needed for TOML config on Python < 3.11.
+# PeerPet ships with NO AI / external services — it's a simple deterministic
+# pet. Stdlib only (pty / socket / sqlite3); `tomli` only backports TOML config
+# on Python < 3.11.
 dependencies = [
     "tomli; python_version < '3.11'",
 ]
@@ -22,10 +23,6 @@ dependencies = [
 dev = [
     "pytest>=8",
     "ruff>=0.5",
-]
-# "cool features later" — opt-in, needs API keys. Not part of the MVP.
-honcho = [
-    "honcho-ai",
 ]
 
 [project.scripts]

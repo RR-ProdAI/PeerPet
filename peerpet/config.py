@@ -31,7 +31,6 @@ class Config:
     pet_rows: int = 1
     tick_interval: float = 0.5  # seconds between animation frames
     shell: str | None = None  # default: $SHELL
-    use_honcho: bool = False  # "cool feature later"; needs honcho extra + keys
 
     @classmethod
     def load(cls, path: Path | None = None) -> Config:

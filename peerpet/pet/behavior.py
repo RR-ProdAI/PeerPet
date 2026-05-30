@@ -4,9 +4,8 @@ Two responsibilities:
   - tick(): advance the pet over elapsed wall-clock time (stats decay, mood).
   - apply_command(): react to a user interaction (feed/play/pet).
 
-No LLM, no randomness in the core loop (keep it predictable and testable). The
-"cool features later" — Honcho-driven personality, LLM replies — would wrap this,
-not replace it.
+No LLM, no randomness in the core loop (keep it predictable and testable). This
+is the whole brain — the pet is deterministic by design.
 """
 
 from __future__ import annotations

@@ -33,8 +33,8 @@ ruff format . && ruff check .
 bottom rows of the screen with a DECSTBM scroll region, and animates the pet
 there independently of the shell. Interaction (`peerpet feed`, `peerpet play`)
 goes over a unix socket to the running host, so your prompt is never blocked.
-Memory is per-OS-user and stored locally (SQLite); a Honcho backend is a planned
-drop-in upgrade.
+Memory is per-OS-user and stored locally (SQLite). The pet is **fully
+deterministic — no LLM, no network, no API keys**.
 
 ## Status
 

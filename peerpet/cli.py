@@ -15,7 +15,7 @@ import json
 import sys
 
 from peerpet import __version__
-from peerpet.config import Config
+from peerpet.config import Config, config_path
 from peerpet.interaction import ipc
 from peerpet.memory.base import current_memory_key, get_memory
 from peerpet.pet import behavior
@@ -54,15 +54,12 @@ def _cmd_config(_: argparse.Namespace) -> int:
     print(
         json.dumps(
             {
-                "config_path": str(
-                    __import__("peerpet.config", fromlist=["config_path"]).config_path()
-                ),
+                "config_path": str(config_path()),
                 "socket_path": str(ipc.socket_path()),
                 "pet_name": cfg.pet_name,
                 "pet_rows": cfg.pet_rows,
                 "tick_interval": cfg.tick_interval,
                 "shell": cfg.resolved_shell,
-                "use_honcho": cfg.use_honcho,
             },
             indent=2,
         )
