@@ -105,13 +105,14 @@ ruff format . && ruff check .
 
 ## Collaboration model (Rishi & Ranjeet)
 
+**Process lives in [`CONTRIBUTING.md`](./CONTRIBUTING.md): branch → PR → green CI
+→ one review → merge. Never commit to `main` directly** (it's protected).
+
 - **Ownership (initial):** keep PRs scoped to one area to avoid stepping on the
   shared screen code.
   - `host/` + `region.py` — the terminal/PTY layer (highest-risk, pair on it).
   - `pet/` + `interaction/` — behavior, sprites, commands.
   - `memory/` — storage interface + local backend.
-- **Branch per feature, small PRs, review each other's work.** The screen code
-  especially: a bad escape sequence corrupts the terminal, so review carefully.
 - **Update this file in the same PR** whenever you change architecture,
   conventions, or run commands. An out-of-date AGENTS.md is a bug.
 - Both authors use Claude Code (Claude Pro). This file is the shared brief — if
