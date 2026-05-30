@@ -131,6 +131,9 @@ def run(config: Config | None = None) -> int:
     try:
         tty.setraw(stdin_fd)
         _set_pty_size(master_fd, rows - pet_rows, cols)
+        # TODO(#19): shift existing screen content down by pet_rows so the strip
+        # is carved cleanly on startup; today the pet overlaps prior content
+        # until the first clear.
         out(region.reserve_top(rows, pet_rows))
         out(region.move_cursor(pet_rows + 1, 1))  # anchor shell below the strip
         draw_pet(tick)
