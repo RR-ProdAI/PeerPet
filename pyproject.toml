@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "peerpet"
-version = "0.0.1"
+dynamic = ["version"]
 description = "A digital pet that lives in the background of your terminal."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -27,6 +27,9 @@ dev = [
 
 [project.scripts]
 peerpet = "peerpet.cli:main"
+
+[tool.hatch.version]
+path = "peerpet/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["peerpet"]
