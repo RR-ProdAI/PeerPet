@@ -16,6 +16,10 @@ release, rename `[Unreleased]` to the new version with the date and start a fres
 ### Added
 - Versioning & release system: single-sourced version (`peerpet/__init__.py`),
   this changelog, and a tag-triggered GitHub Release workflow.
+- `peerpet run` now hosts your real `$SHELL` in a PTY with the pet animating in a
+  reserved top-right strip: a `select()` relay loop, an animation timer,
+  out-of-band `feed`/`play`/`pet` over the unix socket, and clean teardown
+  (scroll region reset + termios restored) on every exit path.
 
 ### Changed
 - Pet lives in a reserved strip at the **top** of the terminal, right-aligned

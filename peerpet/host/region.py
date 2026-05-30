@@ -59,13 +59,18 @@ def draw_at(row: int, text: str, col: int = 1) -> str:
     return save_cursor() + move_cursor(row, col) + clear_line() + text + restore_cursor()
 
 
-def reserve_bottom(total_rows: int, pet_rows: int) -> str:
-    """Reserve the bottom `pet_rows` rows for the pet, leaving the rest as the
-    scrolling shell area. Returns the escape sequence to apply.
+def reserve_top(total_rows: int, pet_rows: int) -> str:
+    """Reserve the top `pet_rows` rows for the pet, leaving the rest as the
+    scrolling shell area below. Returns the escape sequence to apply.
+
+    The pet lives at the top (right-aligned by the renderer); the shell scrolls in
+    rows `pet_rows+1 .. total_rows`. Because the scroll region excludes the pet
+    rows, ordinary shell output can never scroll into them — only absolute cursor
+    moves (`clear`, `ESC[H`) can, which the host re-anchors after.
     """
     if pet_rows < 1 or pet_rows >= total_rows:
         raise ValueError(f"pet_rows={pet_rows} out of range for {total_rows} rows")
-    return set_scroll_region(1, total_rows - pet_rows)
+    return set_scroll_region(pet_rows + 1, total_rows)
 
 
 def teardown() -> str:

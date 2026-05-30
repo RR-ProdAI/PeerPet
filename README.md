@@ -1,7 +1,7 @@
 # PeerPet 🐾
 
 A digital pet that lives in the **background of your terminal** — it animates in a
-reserved strip at the bottom of the screen while your shell stays **fully usable**.
+reserved strip at the top of the screen (top-right) while your shell stays **fully usable**.
 Feed it, play with it, and watch its mood change, all without interrupting your work.
 
 PeerPet is a **simple, deterministic program**: no LLM, no network, no API keys,
@@ -41,7 +41,7 @@ Requires Python ≥ 3.10. No other runtime dependencies.
 
 | Command | What it does |
 |---|---|
-| `peerpet run` | Launch your shell with the pet living at the bottom |
+| `peerpet run` | Launch your shell with the pet living in the top-right |
 | `peerpet feed` | Feed the pet (raises hunger) |
 | `peerpet play` | Play with it (happiness up, energy down) |
 | `peerpet pet` | Give it a pet (small happiness boost) |
@@ -49,7 +49,7 @@ Requires Python ≥ 3.10. No other runtime dependencies.
 | `peerpet config` | Print resolved configuration and paths |
 
 `run` hosts your real `$SHELL`, so just use your terminal normally — the pet
-animates below. Interact from the same or another pane: `peerpet feed`.
+animates in the top-right. Interact from the same or another pane: `peerpet feed`.
 
 ## Configuration
 
@@ -58,7 +58,7 @@ Optional — PeerPet works with zero config. To customize, create
 
 ```toml
 pet_name = "Pixel"      # what to call your pet
-pet_rows = 1            # rows reserved at the bottom for the pet
+pet_rows = 1            # rows reserved at the top for the pet
 tick_interval = 0.5     # seconds between animation frames
 # shell = "/bin/zsh"    # defaults to $SHELL
 ```
@@ -67,10 +67,10 @@ See what's currently in effect with `peerpet config`.
 
 ## How it works
 
-`peerpet run` launches your shell inside a pseudo-terminal and reserves the bottom
-row(s) with a terminal scroll region, animating the pet there independently of your
-shell. Interaction travels over a local unix socket, so your prompt is never
-blocked. Full design in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
+`peerpet run` launches your shell inside a pseudo-terminal and reserves the top
+row(s) with a terminal scroll region, animating the pet there (right-aligned)
+independently of your shell. Interaction travels over a local unix socket, so your
+prompt is never blocked. Full design in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ## Status
 
