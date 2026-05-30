@@ -74,10 +74,13 @@ Co-Authored-By: Ranjeet <...>
 Use issues to track work and split ownership. Reference them from PRs
 (`Closes #N`) so they close on merge.
 
-## Bootstrap note
+## Admin override (use sparingly)
 
-Until Ranjeet accepts the collaborator invite, only Rishi is an active member, so
-the "one approving review" rule can't be satisfied by a second person yet. During
-this window `main` protection does **not** enforce on admins, so Rishi can merge
-when necessary. Once you're both active, flip on "Include administrators" in the
-branch protection settings so the rules apply to everyone equally.
+Both Rishi and Ranjeet are repo admins. By deliberate choice, `main` protection
+does **not** enforce on admins ("Include administrators" is OFF), so either of us
+can merge a PR without waiting for the review/CI requirements — but **only when
+genuinely needed** (an urgent fix, or a solo change with no one around to review).
+
+The default is still the normal loop: PR → green CI → one review → merge. The
+override is an escape hatch, not the everyday path. If we ever want it fully
+locked down, turn on "Include administrators" in branch protection.
