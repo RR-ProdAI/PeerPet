@@ -58,7 +58,9 @@ Optional — PeerPet works with zero config. To customize, create
 
 ```toml
 pet_name = "Pixel"      # what to call your pet
-pet_rows = 1            # rows reserved at the top for the pet
+pet_rows = 1            # rows reserved for the pet
+pet_position = "top"    # "top" (top-right) or "bottom"; "bottom" may keep your
+                        # terminal's native scrollback working while the pet runs
 tick_interval = 0.5     # seconds between animation frames
 # shell = "/bin/zsh"    # defaults to $SHELL
 ```

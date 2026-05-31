@@ -25,5 +25,8 @@ release, rename `[Unreleased]` to the new version with the date and start a fres
 ### Changed
 - Pet lives in a reserved strip at the **top** of the terminal, right-aligned
   (previously specified as a bottom strip).
+- New `pet_position` config option (`top` | `bottom`). A reserved scroll region
+  disables the terminal's native scrollback while the pet runs; `bottom` keeps the
+  region's top margin at row 1, which preserves scrollback on some terminals.
 
 [Unreleased]: https://github.com/RR-ProdAI/PeerPet/commits/main

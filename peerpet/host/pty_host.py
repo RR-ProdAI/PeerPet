@@ -51,7 +51,6 @@ from peerpet.pet import behavior
 
 # Sequences that move into / wipe the whole screen (incl. the pet strip).
 _CLEAR_SEQUENCES = (b"\x1b[2J", b"\x1b[3J", b"\x1bc")
-PET_ROW = 1  # the pet lives on the first reserved row
 
 # Signals that should end the host *cleanly* (reset the terminal). SIGINT is
 # normally swallowed by raw mode (Ctrl-C goes to the child shell), so this mainly
@@ -111,12 +110,29 @@ def run(config: Config | None = None) -> int:
 
     rows, cols = _terminal_size(stdin_fd)
 
+    # Where the strip lives. "bottom" keeps the scroll region's top margin at row
+    # 1, which on some terminals preserves native scrollback; "top" (default)
+    # places the pet top-right but needs re-anchoring after a screen clear.
+    position = config.pet_position if config.pet_position in ("top", "bottom") else "top"
+    if position == "bottom":
+        pet_row = rows
+        shell_top_row = 1
+
+        def reserve() -> str:
+            return region.reserve_bottom(rows, pet_rows)
+    else:
+        pet_row = 1
+        shell_top_row = pet_rows + 1
+
+        def reserve() -> str:
+            return region.reserve_top(rows, pet_rows)
+
     def out(seq: str) -> None:
         os.write(stdout_fd, seq.encode())
 
     def draw_pet(tick: int) -> None:
         buf = io.StringIO()
-        renderer.draw(state, tick, PET_ROW, cols, out=buf)
+        renderer.draw(state, tick, pet_row, cols, out=buf)
         out(buf.getvalue())
 
     _cleaned = False
@@ -156,11 +172,10 @@ def run(config: Config | None = None) -> int:
         for sig in _EXIT_SIGNALS:
             signal.signal(sig, _raise_terminated)
         _set_pty_size(master_fd, rows - pet_rows, cols)
-        # TODO(#19): shift existing screen content down by pet_rows so the strip
-        # is carved cleanly on startup; today the pet overlaps prior content
-        # until the first clear.
-        out(region.reserve_top(rows, pet_rows))
-        out(region.move_cursor(pet_rows + 1, 1))  # anchor shell below the strip
+        # TODO(#19): shift existing screen content out of the strip so it's carved
+        # cleanly on startup; today the pet overlaps prior content until a clear.
+        out(reserve())
+        out(region.move_cursor(shell_top_row, 1))  # anchor shell in its area
         draw_pet(tick)
         next_frame = time.monotonic() + interval
 
@@ -182,10 +197,12 @@ def run(config: Config | None = None) -> int:
                     break  # shell exited
                 os.write(stdout_fd, data)
                 if any(seq in data for seq in _CLEAR_SEQUENCES):
-                    # A full-screen clear wiped the strip and homed into it;
-                    # put the shell back below the strip and repaint the pet.
-                    out(region.reserve_top(rows, pet_rows))
-                    out(region.move_cursor(pet_rows + 1, 1))
+                    # A full-screen clear wiped the strip (and, for a top strip,
+                    # homed the cursor into it). Re-assert the region, re-anchor
+                    # the shell if needed, and repaint the pet.
+                    out(reserve())
+                    if position == "top":
+                        out(region.move_cursor(shell_top_row, 1))
                     draw_pet(tick)
 
             if stdin_fd in readable:
