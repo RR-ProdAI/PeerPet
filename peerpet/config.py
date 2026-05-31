@@ -29,7 +29,7 @@ def config_path() -> Path:
 class Config:
     pet_name: str = "Pixel"
     pet_rows: int = 1
-    pet_position: str = "top"  # "top" or "bottom"; bottom may keep native scrollback
+    pet_position: str = "bottom"  # "bottom" (default, keeps scrollback) or "top"
     tick_interval: float = 0.5  # seconds between animation frames
     shell: str | None = None  # default: $SHELL
 

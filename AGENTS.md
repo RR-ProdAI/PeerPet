@@ -34,10 +34,12 @@ are NOT dependencies of the shipped pet. Don't add AI to the product.
 ## Architecture
 
 A **PTY host** owns the screen. It spawns the user's real shell inside a
-pseudo-terminal (like `tmux`/`script`), reserves the top N rows with a
+pseudo-terminal (like `tmux`/`script`), reserves the bottom N rows with a
 DECSTBM scroll region (`ESC[<top>;<bottom>r`), and animates the pet in those
-rows (right-aligned, top-right) independently of the shell — saving/restoring the
+rows (right-aligned, bottom-right) independently of the shell — saving/restoring the
 cursor (`ESC7`/`ESC8`) around every draw so the user's input line is never disturbed.
+The strip defaults to the bottom so the region's top margin stays at row 1, which
+preserves the terminal's native scrollback; `pet_position = "top"` is also supported.
 
 ```
 peerpet/

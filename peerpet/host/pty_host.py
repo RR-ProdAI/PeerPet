@@ -6,22 +6,25 @@ user's terminal. Verify behavior in a *throwaway* terminal.
 Design:
   1. Save terminal state; put the real terminal in raw mode.
   2. pty.fork() the user's shell as the child, attached to the pty slave.
-  3. Reserve the top `pet_rows` rows (region.reserve_top) and size the child pty
-     to (rows - pet_rows) so the shell never scrolls into the pet. Anchor the
-     shell's cursor below the strip.
+  3. Reserve `pet_rows` rows for the pet and size the child pty to (rows -
+     pet_rows) so the shell never scrolls into the pet. The strip defaults to the
+     bottom (`pet_position`): a bottom strip keeps the scroll region's top margin
+     at row 1, which preserves the terminal's native scrollback and lets the
+     shell's cursor coordinates pass through; a top strip puts the pet top-right
+     but disables scrollback and needs the shell re-anchored below the strip.
   4. select() over [real stdin, pty master, ipc socket]:
        - stdin  -> pty master (user input to the shell)
-       - master -> stdout     (shell output, scrolls below the strip)
+       - master -> stdout     (shell output, scrolls in the shell rows)
        - ipc    -> apply command to the live state, redraw
   5. On a timer, advance the animation and renderer.draw() into the pet row,
-     right-aligned (top-right).
+     right-aligned.
   6. ALWAYS teardown (region.teardown + restore termios) via try/finally +
-     atexit, including on crash.
+     atexit + signal handlers, including on crash.
 
 The scroll region keeps ordinary shell output out of the pet rows. The one thing
-it can't stop is an *absolute* move into row 1 — `clear` / `reset` / Ctrl-L emit
-`ESC[2J` / `ESC[H` / `ESC c`. We detect those in the shell's output and re-anchor
-the cursor below the strip, then repaint the pet.
+it can't stop is an *absolute* screen wipe — `clear` / `reset` / Ctrl-L emit
+`ESC[2J` / `ESC c`. We detect those in the shell's output, re-assert the region
+(re-anchoring the shell for a top strip), and repaint the pet.
 
 Not yet handled here (separate issues): SIGWINCH resize (#11) and pausing while
 the shell is on the alternate screen — vim/htop (#12).

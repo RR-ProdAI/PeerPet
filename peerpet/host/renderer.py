@@ -1,8 +1,9 @@
 """Render the pet into the reserved region.
 
 Composes a status line from the pet state + sprite, then uses `region.draw_at`
-to place it without disturbing the user's cursor. The pet sits in the top strip,
-**right-aligned**, so it lands in the top-right with headroom to animate.
+to place it without disturbing the user's cursor. The pet is **right-aligned** in
+its reserved row, so it lands in the corner (bottom-right by default) with headroom
+to animate.
 
 `compose()` and `display_width()` are pure and unit-testable; `draw()` does the
 actual write.
