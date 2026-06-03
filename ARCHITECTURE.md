@@ -23,36 +23,35 @@ this the way `tmux` and `script` do — by owning the terminal:
 ```
             real terminal
         ┌──────────────────────────┐
-        │           (◕ᴥ◕) Pixel·content│ ← reserved pet row(s), top, right-aligned
-        ├──────────────────────────┤
-        │  your shell (scrolls)     │  ← rows pet_rows+1 .. N  (DECSTBM region)
+        │  your shell (scrolls)     │  ← rows 1 .. N-pet_rows  (DECSTBM region)
         │  $ git status             │
         │  $ npm test               │
+        ├──────────────────────────┤
+        │           (◕ᴥ◕) Pixel·content│ ← reserved pet row(s), bottom, right-aligned
         └──────────────────────────┘
 ```
 
 1. `peerpet run` launches your real `$SHELL` inside a **pseudo-terminal (PTY)**.
 2. The host sets a **DECSTBM scroll region** (`ESC[<top>;<bottom>r`) covering rows
-   `pet_rows+1 .. N`, so the shell only ever scrolls *below* the reserved strip;
-   the top `pet_rows` rows are reserved for the pet.
-3. The child PTY is sized to `rows - pet_rows`, and its output is anchored at the
-   first row below the strip, so the shell never scrolls into the pet.
+   `1 .. N-pet_rows`, so the shell only ever scrolls *above* the reserved strip;
+   the bottom `pet_rows` rows are reserved for the pet.
+3. The child PTY is sized to `rows - pet_rows`, and its output occupies the region
+   above the strip, so the shell never scrolls into the pet.
 4. The host runs a `select()` relay (real stdin → PTY master, PTY master → real
    stdout) and, on its own timer, animates the pet into the reserved rows —
-   **right-aligned** so it sits in the top-right with room to move — wrapping every
-   draw in cursor **save/restore** so your input line is untouched.
+   **right-aligned** so it sits in the bottom-right with room to move — wrapping
+   every draw in cursor **save/restore** so your input line is untouched.
 
 This keeps the shell 100% usable and works in any terminal (including WSL2),
 which is exactly why we chose it over a floating overlay window (see decisions).
 
-> **Why the top, and why a strip (not a free-floating corner sprite)?** Anchoring
-> the strip at the top gives the animation headroom and a natural feel, while a
-> reserved DECSTBM region — not a sprite floated over live output — is what keeps
-> the pet from being overwritten by scrolling text. A top strip costs a little
-> more care than a bottom one: cursor-home and `clear` (`ESC[H` / `ESC[2J`) target
-> row 1, which is now the pet's, so the host keeps the shell anchored below the
-> strip and repaints the pet after a full-screen clear. See the alt-screen note
-> under *Data flow*.
+> **Why a strip (not a free-floating corner sprite)?** A reserved DECSTBM region
+> — not a sprite floated over live output — is what keeps the pet from being
+> overwritten by scrolling text. A bottom strip keeps the cursor accounting
+> simple: the shell occupies the region from row 1 down, so cursor-home (`ESC[H`)
+> lands in the shell's area, not the pet's. A full-screen clear (`ESC[2J`) still
+> wipes the whole screen including the pet's rows, so the host repaints the pet
+> after one. See the alt-screen note under *Data flow*.
 
 ## Components
 
@@ -88,7 +87,7 @@ peerpet/
 - **Resize:** `SIGWINCH` → recompute the region → resize the child PTY → redraw.
 - **Filling the screen with output (e.g. `cat` a long `.log`):** the DECSTBM
   region confines that output to the shell rows, so even a file that scrolls past
-  the whole window stays *below* the reserved strip and never overlaps or
+  the whole window stays *above* the reserved strip and never overlaps or
   smears the pet — the pet's rows are simply not part of the shell's scroll area.
 - **Full-screen apps (vim, htop, less):** these switch to the terminal's
   **alternate screen buffer**. The host detects the alt-screen enter/leave
@@ -99,13 +98,13 @@ peerpet/
 
 ## Key decisions
 
-1. **In-terminal reserved region (top strip, pet right-aligned), not a floating
+1. **In-terminal reserved region (bottom strip, pet right-aligned), not a floating
    overlay window.** A transparent always-on-top window (Shimeji-style) gives
    richer art but is OS-specific and painful on WSL2. A reserved scroll region
    works in any terminal and keeps the pet truly "in" the terminal. We reserve the
-   strip at the **top** and render the pet **right-aligned** within it — the
-   top-right placement gives the animation headroom and a natural feel, without
-   the fragility of compositing a sprite over live scrolling output.
+   strip at the **bottom** and render the pet **right-aligned** within it
+   (bottom-right), without the fragility of compositing a sprite over live
+   scrolling output.
 2. **PTY host (own the terminal), not shell hooks.** A prompt hook could only
    animate between commands. Owning the PTY lets the pet animate continuously
    while the shell stays fully interactive.
@@ -114,16 +113,13 @@ peerpet/
 4. **Deterministic — no AI in the product.** Pet behavior is a plain state
    machine. No LLM, no network, no API keys. This keeps it lightweight, private,
    predictable, and testable.
-5. **Honcho / Hermes are dev-workflow tools only.** Hermes = the `AGENTS.md`
-   convention our coding assistants read; Honcho = optional shared memory for
-   *our* assistant sessions. Neither is imported by `peerpet/` or shipped.
-6. **One ANSI writer.** Only `host/region.py` emits raw escape sequences, so
+5. **One ANSI writer.** Only `host/region.py` emits raw escape sequences, so
    cursor accounting lives in one place and is unit-testable as strings.
-7. **Memory behind an interface.** All persistence goes through `memory.Memory`;
+6. **Memory behind an interface.** All persistence goes through `memory.Memory`;
    `local.py` (SQLite, keyed by OS user) is the implementation. The boundary lets
    us swap storage later without touching the pet — but it stays plain local
    storage, no external service.
-8. **Out-of-band interaction.** Commands travel over a unix socket, not the
+7. **Out-of-band interaction.** Commands travel over a unix socket, not the
    shell's stdin, so the prompt is never blocked or intercepted.
 
 ## Non-goals
