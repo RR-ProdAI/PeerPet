@@ -4,6 +4,10 @@
 > assistant working on this repo. Claude Code and Hermes both read this file
 > automatically — keep it accurate, it is load-bearing.
 
+# Agent instructions for this repo
+
+You are dedicated to this repository only.
+
 ## What we're building
 
 PeerPet is a **digital pet that lives in the background of your terminal**. It
