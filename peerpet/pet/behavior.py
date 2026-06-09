@@ -19,6 +19,11 @@ HUNGER_DECAY_PER_HOUR = 8.0
 ENERGY_DECAY_PER_HOUR = 5.0
 HAPPINESS_DECAY_PER_HOUR = 4.0
 
+# Below either threshold the pet is SAD; otherwise HAPPY. Two moods only for now
+# (see sprites.py) — the animation reads clearly as happy vs sad.
+HUNGER_SAD_THRESHOLD = 30.0
+HAPPINESS_SAD_THRESHOLD = 30.0
+
 # How much each interaction gives.
 FEED_HUNGER = 25.0
 PLAY_HAPPINESS = 20.0
@@ -69,12 +74,7 @@ def _grant_xp(state: PetState, amount: int) -> None:
 
 
 def _derive_mood(state: PetState) -> Mood:
-    if state.hunger < 25:
-        return Mood.HUNGRY
-    if state.energy < 25:
-        return Mood.SLEEPY
-    if state.happiness < 30:
+    """Two moods: SAD when hunger or happiness runs low, else HAPPY."""
+    if state.hunger < HUNGER_SAD_THRESHOLD or state.happiness < HAPPINESS_SAD_THRESHOLD:
         return Mood.SAD
-    if state.happiness > 75 and state.hunger > 50:
-        return Mood.HAPPY
-    return Mood.CONTENT
+    return Mood.HAPPY

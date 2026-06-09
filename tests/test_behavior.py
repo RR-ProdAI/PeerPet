@@ -33,10 +33,22 @@ def test_xp_levels_up():
     assert state.level == 2
 
 
-def test_low_hunger_makes_pet_hungry():
+def test_low_hunger_makes_pet_sad():
     state = PetState(hunger=5, energy=80, happiness=80)
     behavior.tick(state)
-    assert state.mood == Mood.HUNGRY
+    assert state.mood == Mood.SAD
+
+
+def test_low_happiness_makes_pet_sad():
+    state = PetState(hunger=80, energy=80, happiness=5)
+    behavior.tick(state)
+    assert state.mood == Mood.SAD
+
+
+def test_well_fed_and_happy_is_happy():
+    state = PetState(hunger=80, energy=80, happiness=80, last_seen=time.time())
+    behavior.tick(state)
+    assert state.mood == Mood.HAPPY
 
 
 def test_unknown_command_raises():

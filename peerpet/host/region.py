@@ -49,6 +49,26 @@ def clear_line() -> str:
     return f"{CSI}2K"
 
 
+def cursor_up(n: int = 1) -> str:
+    """Move the cursor up `n` rows (CUU). No-op string for n <= 0."""
+    return f"{CSI}{n}A" if n > 0 else ""
+
+
+def cursor_down(n: int = 1) -> str:
+    """Move the cursor down `n` rows (CUD). No-op string for n <= 0."""
+    return f"{CSI}{n}B" if n > 0 else ""
+
+
+def hide_cursor() -> str:
+    """Hide the text cursor (DECTCEM). Restore with show_cursor()."""
+    return f"{CSI}?25l"
+
+
+def show_cursor() -> str:
+    """Show the text cursor (DECTCEM). Always pair this with hide_cursor()."""
+    return f"{CSI}?25h"
+
+
 def draw_at(row: int, text: str, col: int = 1) -> str:
     """Build a sequence that draws `text` at (row, col) without disturbing the
     user's cursor: save, move, clear line, write, restore.
