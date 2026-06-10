@@ -17,10 +17,26 @@ release, rename `[Unreleased]` to the new version with the date and start a fres
 - Versioning & release system: single-sourced version (`peerpet/__init__.py`),
   this changelog, and a tag-triggered GitHub Release workflow.
 - `peerpet run` now hosts your real `$SHELL` in a PTY with the pet animating in a
-  reserved top-right strip: a `select()` relay loop, an animation timer,
+  reserved corner strip: a `select()` relay loop, an animation timer,
   out-of-band `feed`/`play`/`pet` over the unix socket, and clean teardown
   (scroll region reset + termios restored) on every exit path — normal `exit`,
   Ctrl-D, and signals (`SIGTERM`/`pkill`, `SIGHUP`, `SIGINT`).
+- Pet animation engine (`pet/animation.py`): an `Animator` that picks each frame
+  — a *mostly-still* idle loop that blinks occasionally (not a constant twitch),
+  with one-shot **reactions** (feed/play/pet) that override the idle then settle
+  back. Pure logic with an injectable clock, unit-tested. The host fires the
+  matching reaction when a `feed`/`play`/`pet` command lands.
+- New multi-line **alien mascot** sprite (`pet/sprites.py`): a rounded head with
+  eyes, mouth, and arms; per-mood idle frames + reaction sequences (munch / wave
+  / hearts). All frames are equal size to prevent jitter.
+- `peerpet demo` command (`demo.py`): a safe, standalone preview of the
+  animation in the current terminal — no PTY host, no scroll region. Runs on an
+  accelerated, balanced clock so the pet visibly swings happy↔sad and fires
+  reactions; restores the cursor and exits cleanly on Ctrl-C. No-ops to a single
+  static frame when output isn't a TTY.
+- Renderer multi-row support (`host/renderer.py` `compose_lines`) and cursor
+  primitives (`host/region.py` `cursor_up`/`cursor_down`/`hide_cursor`/
+  `show_cursor`).
 
 ### Changed
 - The pet renders in a reserved strip at the **bottom-right** by default, which
@@ -28,5 +44,8 @@ release, rename `[Unreleased]` to the new version with the date and start a fres
   (`bottom` | `top`); `top` puts the pet top-right but disables scrollback while it
   runs (a reserved scroll region whose top margin isn't row 1 stops the terminal
   saving scrolled-off lines).
+- Mood is now two states (`behavior._derive_mood`): **sad** when hunger *or*
+  happiness is below 30, otherwise **happy** — so the animation reads clearly.
+  The status line now shows happiness (was energy/level).
 
 [Unreleased]: https://github.com/RR-ProdAI/PeerPet/commits/main

@@ -1,6 +1,7 @@
 import io
 
 from peerpet.host import region, renderer
+from peerpet.pet import sprites
 from peerpet.pet.state import Mood, PetState
 
 
@@ -23,15 +24,17 @@ def test_right_aligned_col_never_negative():
 
 def test_compose_mentions_name_and_mood():
     state = PetState(name="Rex", mood=Mood.HAPPY)
-    line = renderer.compose(state, tick=0)
+    sprite = sprites.frame_for(state.mood, 0)
+    line = renderer.compose(state, sprite)
     assert "Rex" in line
     assert "happy" in line
 
 
 def test_draw_wraps_in_save_restore_and_targets_row():
     state = PetState(name="Rex")
+    sprite = sprites.frame_for(state.mood, 0)
     buf = io.StringIO()
-    renderer.draw(state, tick=0, row=1, cols=80, out=buf)
+    renderer.draw(state, sprite, row=1, cols=80, out=buf)
     seq = buf.getvalue()
     assert seq.startswith(region.save_cursor())
     assert seq.endswith(region.restore_cursor())

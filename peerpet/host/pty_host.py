@@ -51,6 +51,7 @@ from peerpet.interaction.commands import make_host_handler
 from peerpet.interaction.ipc import IpcServer
 from peerpet.memory.base import current_memory_key, get_memory
 from peerpet.pet import behavior
+from peerpet.pet.animation import Animator
 
 # Sequences that move into / wipe the whole screen (incl. the pet strip).
 _CLEAR_SEQUENCES = (b"\x1b[2J", b"\x1b[3J", b"\x1bc")
@@ -95,6 +96,7 @@ def run(config: Config | None = None) -> int:
     key = current_memory_key()
     state = memory.load(key)
     behavior.tick(state)  # settle stats to "now" before we start drawing
+    animator = Animator()
 
     pet_rows = config.pet_rows
     interval = config.tick_interval
@@ -108,15 +110,26 @@ def run(config: Config | None = None) -> int:
 
     # --- Parent: the host ---
     old_termios = termios.tcgetattr(stdin_fd)
-    ipc = IpcServer(make_host_handler(state, memory, key))
+
+    # Wrap the state handler so a landed command also fires its one-shot
+    # animation (feed/play/pet); the next render tick picks up the reaction.
+    _apply_command = make_host_handler(state, memory, key)
+
+    def handle_command(command: str, payload: dict) -> dict:
+        reply = _apply_command(command, payload)
+        if reply.get("ok"):
+            animator.trigger(command)
+        return reply
+
+    ipc = IpcServer(handle_command)
     ipc_sock = ipc.start()
 
     rows, cols = _terminal_size(stdin_fd)
 
-    # Where the strip lives. "bottom" keeps the scroll region's top margin at row
-    # 1, which on some terminals preserves native scrollback; "top" (default)
+    # Where the strip lives. "bottom" (default) keeps the scroll region's top
+    # margin at row 1, which on some terminals preserves native scrollback; "top"
     # places the pet top-right but needs re-anchoring after a screen clear.
-    position = config.pet_position if config.pet_position in ("top", "bottom") else "top"
+    position = config.pet_position if config.pet_position in ("top", "bottom") else "bottom"
     if position == "bottom":
         pet_row = rows
         shell_top_row = 1
@@ -133,9 +146,10 @@ def run(config: Config | None = None) -> int:
     def out(seq: str) -> None:
         os.write(stdout_fd, seq.encode())
 
-    def draw_pet(tick: int) -> None:
+    def draw_pet() -> None:
+        sprite = animator.current_sprite(state.mood)
         buf = io.StringIO()
-        renderer.draw(state, tick, pet_row, cols, out=buf)
+        renderer.draw(state, sprite, pet_row, cols, out=buf)
         out(buf.getvalue())
 
     _cleaned = False
@@ -168,7 +182,6 @@ def run(config: Config | None = None) -> int:
         except ProcessLookupError:
             pass
 
-    tick = 0
     try:
         tty.setraw(stdin_fd)
         # Catch signals so we always reset the terminal (hard-constraint #2).
@@ -179,7 +192,7 @@ def run(config: Config | None = None) -> int:
         # cleanly on startup; today the pet overlaps prior content until a clear.
         out(reserve())
         out(region.move_cursor(shell_top_row, 1))  # anchor shell in its area
-        draw_pet(tick)
+        draw_pet()
         next_frame = time.monotonic() + interval
 
         while True:
@@ -206,7 +219,7 @@ def run(config: Config | None = None) -> int:
                     out(reserve())
                     if position == "top":
                         out(region.move_cursor(shell_top_row, 1))
-                    draw_pet(tick)
+                    draw_pet()
 
             if stdin_fd in readable:
                 data = os.read(stdin_fd, 65536)
@@ -216,12 +229,11 @@ def run(config: Config | None = None) -> int:
             if ipc_sock in readable:
                 conn, _ = ipc_sock.accept()
                 ipc.handle_connection(conn)
-                draw_pet(tick)  # reflect feed/play/pet immediately
+                draw_pet()  # reflect feed/play/pet immediately
 
             if time.monotonic() >= next_frame:
-                tick += 1
                 behavior.tick(state)
-                draw_pet(tick)
+                draw_pet()
                 next_frame = time.monotonic() + interval
     except _Terminated:
         pass  # signal received — fall through to clean teardown

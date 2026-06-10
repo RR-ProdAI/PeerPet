@@ -35,8 +35,8 @@ this the way `tmux` and `script` do — by owning the terminal:
 2. The host sets a **DECSTBM scroll region** (`ESC[<top>;<bottom>r`) covering rows
    `1 .. N-pet_rows`, so the shell only ever scrolls *above* the reserved strip;
    the bottom `pet_rows` rows are reserved for the pet.
-3. The child PTY is sized to `rows - pet_rows`, so the shell never scrolls into
-   the pet.
+3. The child PTY is sized to `rows - pet_rows`, and its output occupies the region
+   above the strip, so the shell never scrolls into the pet.
 4. The host runs a `select()` relay (real stdin → PTY master, PTY master → real
    stdout) and, on its own timer, animates the pet into the reserved rows —
    **right-aligned** so it sits in the bottom-right with room to move — wrapping
@@ -51,8 +51,10 @@ which is exactly why we chose it over a floating overlay window (see decisions).
 > so the region's top margin stays at row 1: that preserves the terminal's native
 > **scrollback** (a top strip moves the top margin to row 2, and most terminals
 > then stop saving scrolled-off lines), and the shell's own cursor coordinates pass
-> through untouched. The pet can also live at the top via `pet_position = "top"`,
-> at the cost of scrollback while it runs.
+> through untouched. A full-screen clear (`ESC[2J`) still wipes the whole screen
+> including the pet's rows, so the host repaints the pet after one. The pet can
+> also live at the top via `pet_position = "top"`, at the cost of scrollback while
+> it runs.
 
 ## Components
 
@@ -119,16 +121,13 @@ peerpet/
 4. **Deterministic — no AI in the product.** Pet behavior is a plain state
    machine. No LLM, no network, no API keys. This keeps it lightweight, private,
    predictable, and testable.
-5. **Honcho / Hermes are dev-workflow tools only.** Hermes = the `AGENTS.md`
-   convention our coding assistants read; Honcho = optional shared memory for
-   *our* assistant sessions. Neither is imported by `peerpet/` or shipped.
-6. **One ANSI writer.** Only `host/region.py` emits raw escape sequences, so
+5. **One ANSI writer.** Only `host/region.py` emits raw escape sequences, so
    cursor accounting lives in one place and is unit-testable as strings.
-7. **Memory behind an interface.** All persistence goes through `memory.Memory`;
+6. **Memory behind an interface.** All persistence goes through `memory.Memory`;
    `local.py` (SQLite, keyed by OS user) is the implementation. The boundary lets
    us swap storage later without touching the pet — but it stays plain local
    storage, no external service.
-8. **Out-of-band interaction.** Commands travel over a unix socket, not the
+7. **Out-of-band interaction.** Commands travel over a unix socket, not the
    shell's stdin, so the prompt is never blocked or intercepted.
 
 ## Non-goals

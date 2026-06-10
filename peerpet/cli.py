@@ -6,6 +6,7 @@ play    play with the running pet
 pet     pet the running pet
 status  print the pet's state as JSON (no host / TTY needed)
 config  print resolved config + paths
+demo    preview the pet animation in this terminal (no host)
 """
 
 from __future__ import annotations
@@ -74,6 +75,12 @@ def _cmd_run(_: argparse.Namespace) -> int:
     return pty_host.run(Config.load())
 
 
+def _cmd_demo(_: argparse.Namespace) -> int:
+    from peerpet import demo
+
+    return demo.run()
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="peerpet", description=__doc__)
     parser.add_argument("--version", action="version", version=f"peerpet {__version__}")
@@ -82,6 +89,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("run", help="launch a shell with the pet").set_defaults(func=_cmd_run)
     sub.add_parser("status", help="print pet state as JSON").set_defaults(func=_cmd_status)
     sub.add_parser("config", help="print resolved config").set_defaults(func=_cmd_config)
+    sub.add_parser("demo", help="preview the pet animation").set_defaults(func=_cmd_demo)
 
     for cmd, help_text in [
         ("feed", "feed the running pet"),

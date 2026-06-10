@@ -1,8 +1,8 @@
 # AGENTS.md — PeerPet
 
 > Shared contract for the two co-authors (Rishi & Ranjeet) and any AI coding
-> assistant working on this repo. Claude Code and Hermes both read this file
-> automatically — keep it accurate, it is load-bearing.
+> assistant working on this repo. These assistants read this file automatically
+> — keep it accurate, it is load-bearing.
 
 # Agent instructions for this repo
 
@@ -19,9 +19,7 @@ usable**. You interact with it through out-of-band commands (`peerpet feed`,
 If a feature makes the shell feel laggy, janky, or "taken over," it's wrong.
 
 **Scope (read this):** PeerPet the product is a **simple, deterministic pet — no
-LLM, no AI, no external services, no network.** Honcho and Hermes are
-**dev-workflow tools for us, the authors** (see "Dev workflow & tooling"); they
-are NOT dependencies of the shipped pet. Don't add AI to the product.
+LLM, no AI, no external services, no network.** Don't add AI to the product.
 
 ## Hard constraints (do not violate)
 
@@ -45,42 +43,9 @@ cursor (`ESC7`/`ESC8`) around every draw so the user's input line is never distu
 The strip defaults to the bottom so the region's top margin stays at row 1, which
 preserves the terminal's native scrollback; `pet_position = "top"` is also supported.
 
-```
-peerpet/
-  __main__.py        entrypoint: `peerpet` launches the wrapped shell
-  cli.py             subcommands: run / feed / play / status / config
-  host/
-    pty_host.py      spawn shell in pty, relay stdin/stdout, handle SIGWINCH
-    region.py        DECSTBM scroll-region mgmt + cursor save/restore
-    renderer.py      render the current frame into the reserved rows
-  pet/
-    state.py         pet model: hunger, mood, energy, xp, last_seen
-    behavior.py      tick loop, mood transitions, idle animations
-    sprites.py       ASCII / Unicode frames per mood & animation
-  interaction/
-    ipc.py           unix-socket server (host side) + client (cli side)
-    commands.py      feed / play / pet handlers
-  memory/
-    base.py          Memory interface (get/set per-user state + events)
-    local.py         SQLite backend at ~/.local/share/peerpet/<user>.db
-  config.py          loads ~/.config/peerpet/config.toml
-```
-
-### Data flow
-- **Render path:** `behavior.tick()` → updates `state` → `renderer` draws the
-  frame for the current mood into the reserved region. Runs on a timer, off the
-  shell's critical path.
-- **Interaction path:** `peerpet feed` (a separate process) → `ipc` client sends
-  a message over the unix socket → host applies it to `state` → next tick reacts.
-- **Resize:** `SIGWINCH` → recompute region → resize child PTY to
-  `rows - PET_ROWS` → redraw.
-
-### Memory abstraction (important)
-All persistence goes through `memory/base.py:Memory`. The implementation is
-`local.py` (SQLite, one row per OS user). **Never** import a concrete backend
-outside `memory/`; depend on the interface. This boundary stays clean so we can
-swap storage later without touching the pet — but it's plain local storage, no
-external service.
+The full component map, data flow, and the reasoning behind each design choice
+live in [`ARCHITECTURE.md`](./ARCHITECTURE.md). Keep it in sync when you change
+the shape of the code.
 
 ## Conventions
 
@@ -91,6 +56,8 @@ external service.
   explicitly.
 - **Terminal writes go through `host/region.py` only.** Nothing else writes raw
   escape codes — this keeps cursor accounting in one place.
+- **All persistence goes through the `memory.Memory` interface.** Never import a
+  concrete backend outside `memory/`; storage stays swappable and local-only.
 - **Keep sprites in `sprites.py`,** not inline in logic. One dict: mood → frames.
 - **Tests:** `pytest`. The terminal layer is hard to unit-test; cover `pet/` and
   `memory/` well, and test `region.py` escape-sequence output as strings.
@@ -124,18 +91,30 @@ ruff format . && ruff check .
 - Both authors use Claude Code (Claude Pro). This file is the shared brief — if
   you find yourself re-explaining context to the assistant, put it here instead.
 
-## Dev workflow & tooling (NOT part of the product)
+## For AI assistants
 
-These help *us build* PeerPet; they never ship inside it and add no runtime deps.
+Everything in [`CONTRIBUTING.md`](./CONTRIBUTING.md) applies to you. A few rules
+matter more for an autonomous agent than for a human — partly because you lack a
+human's instincts, and partly because `main` protection does **NOT** enforce on
+admins ("Include administrators" is OFF). If you run under Rishi's or Ranjeet's
+account, git will *let* you do things you must never do:
 
-- **Hermes** → this `AGENTS.md` convention. It's the shared contract our coding
-  assistants (Claude Code / Hermes) read. Keep it accurate; that's its whole job.
-- **Honcho** → *optional* shared memory for our coding assistants, so context and
-  preferences can sync between Rishi's and Ranjeet's sessions. Lives in dev
-  tooling, outside the package — **never** imported by `peerpet/`.
+- **Never push or merge to `main`** — even though admin override makes it
+  technically possible. That escape hatch is for a human to invoke consciously;
+  it is never yours. Stop after opening the PR.
+- **Never merge your own PR.** Open it, then hand off for human review.
+- **Never run destructive commands without explicit approval:** `git push -f`
+  / `--force`, `git reset --hard`, `git clean -fd`, branch deletion, or anything
+  that rewrites published history or discards uncommitted work.
+- **Run `git diff --staged` before each commit;** never commit secrets, `.env`,
+  keys, or the local memory DB (under `~/.local/share/peerpet/`).
+- **When done,** run the same checks CI runs locally
+  (`ruff format . && ruff check . && pytest -q`), then report the branch name,
+  the PR link, and a plain-language summary. Don't call a task finished before
+  that.
 
-If you ever feel tempted to give the *pet* an LLM or call Honcho/Hermes from
-product code: don't. That's a different project. The pet stays deterministic.
+If a destructive or irreversible action seems necessary, describe it and ask
+first.
 
 ## Roadmap (product)
 
