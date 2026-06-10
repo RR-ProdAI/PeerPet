@@ -29,6 +29,17 @@ def test_teardown_restores_full_screen():
     assert region.reset_scroll_region() in seq
 
 
+def test_cursor_visibility_toggles():
+    assert region.hide_cursor() == "\x1b[?25l"
+    assert region.show_cursor() == "\x1b[?25h"
+
+
+def test_cursor_up_down():
+    assert region.cursor_up(3) == "\x1b[3A"
+    assert region.cursor_down(2) == "\x1b[2B"
+    assert region.cursor_up(0) == ""  # no-op, never emits a stray escape
+
+
 @pytest.mark.parametrize("top,bottom", [(0, 5), (5, 4)])
 def test_invalid_region_raises(top, bottom):
     with pytest.raises(ValueError):
