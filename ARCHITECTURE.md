@@ -45,13 +45,16 @@ this the way `tmux` and `script` do — by owning the terminal:
 This keeps the shell 100% usable and works in any terminal (including WSL2),
 which is exactly why we chose it over a floating overlay window (see decisions).
 
-> **Why a strip (not a free-floating corner sprite)?** A reserved DECSTBM region
-> — not a sprite floated over live output — is what keeps the pet from being
-> overwritten by scrolling text. A bottom strip keeps the cursor accounting
-> simple: the shell occupies the region from row 1 down, so cursor-home (`ESC[H`)
-> lands in the shell's area, not the pet's. A full-screen clear (`ESC[2J`) still
-> wipes the whole screen including the pet's rows, so the host repaints the pet
-> after one. See the alt-screen note under *Data flow*.
+> **Why the bottom, and why a strip (not a free-floating corner sprite)?** A
+> reserved DECSTBM region — not a sprite floated over live output — is what keeps
+> the pet from being overwritten by scrolling text. We reserve it at the **bottom**
+> so the region's top margin stays at row 1: that preserves the terminal's native
+> **scrollback** (a top strip moves the top margin to row 2, and most terminals
+> then stop saving scrolled-off lines), and the shell's own cursor coordinates pass
+> through untouched. A full-screen clear (`ESC[2J`) still wipes the whole screen
+> including the pet's rows, so the host repaints the pet after one. The pet can
+> also live at the top via `pet_position = "top"`, at the cost of scrollback while
+> it runs.
 
 ## Components
 
@@ -89,6 +92,9 @@ peerpet/
   region confines that output to the shell rows, so even a file that scrolls past
   the whole window stays *above* the reserved strip and never overlaps or
   smears the pet — the pet's rows are simply not part of the shell's scroll area.
+- **Scrollback:** because the region's top margin is row 1 (bottom strip), the
+  terminal keeps feeding scrolled-off lines into its native scrollback, so the
+  mouse wheel still works. `pet_position = "top"` gives that up (top margin row 2).
 - **Full-screen apps (vim, htop, less):** these switch to the terminal's
   **alternate screen buffer**. The host detects the alt-screen enter/leave
   (DECSET/DECRST `1049`) and **pauses pet drawing** while it's active, then
@@ -102,9 +108,11 @@ peerpet/
    overlay window.** A transparent always-on-top window (Shimeji-style) gives
    richer art but is OS-specific and painful on WSL2. A reserved scroll region
    works in any terminal and keeps the pet truly "in" the terminal. We reserve the
-   strip at the **bottom** and render the pet **right-aligned** within it
-   (bottom-right), without the fragility of compositing a sprite over live
-   scrolling output.
+   strip at the **bottom** (pet **right-aligned** → bottom-right) so the scroll
+   region's top margin stays at row 1: this **preserves native scrollback** and
+   lets the shell's own cursor coordinates pass through untouched. A top strip
+   (`pet_position = "top"`) puts the pet top-right but disables scrollback while it
+   runs and needs the host to re-anchor the cursor after a screen clear.
 2. **PTY host (own the terminal), not shell hooks.** A prompt hook could only
    animate between commands. Owning the PTY lets the pet animate continuously
    while the shell stays fully interactive.

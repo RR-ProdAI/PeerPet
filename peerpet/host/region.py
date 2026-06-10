@@ -79,9 +79,31 @@ def draw_at(row: int, text: str, col: int = 1) -> str:
     return save_cursor() + move_cursor(row, col) + clear_line() + text + restore_cursor()
 
 
+def reserve_top(total_rows: int, pet_rows: int) -> str:
+    """Reserve the top `pet_rows` rows for the pet, leaving the rest as the
+    scrolling shell area below. Returns the escape sequence to apply.
+
+    The pet lives at the top (right-aligned by the renderer); the shell scrolls in
+    rows `pet_rows+1 .. total_rows`. Because the scroll region excludes the pet
+    rows, ordinary shell output can never scroll into them — only absolute cursor
+    moves (`clear`, `ESC[H`) can, which the host re-anchors after.
+
+    Note: the region's top margin is row `pet_rows+1`, not row 1, so most
+    terminals do not feed scrolled-off lines into native scrollback while it's
+    active. `reserve_bottom` keeps the top margin at row 1 and may preserve
+    scrollback on some terminals.
+    """
+    if pet_rows < 1 or pet_rows >= total_rows:
+        raise ValueError(f"pet_rows={pet_rows} out of range for {total_rows} rows")
+    return set_scroll_region(pet_rows + 1, total_rows)
+
+
 def reserve_bottom(total_rows: int, pet_rows: int) -> str:
-    """Reserve the bottom `pet_rows` rows for the pet, leaving the rest as the
-    scrolling shell area. Returns the escape sequence to apply.
+    """Reserve the bottom `pet_rows` rows for the pet; the shell scrolls in rows
+    `1 .. total_rows-pet_rows` above it. Returns the escape sequence to apply.
+
+    The region's top margin stays at row 1, so the shell's own coordinates pass
+    through untouched and some terminals still accumulate scrollback.
     """
     if pet_rows < 1 or pet_rows >= total_rows:
         raise ValueError(f"pet_rows={pet_rows} out of range for {total_rows} rows")

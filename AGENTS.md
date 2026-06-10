@@ -4,6 +4,10 @@
 > assistant working on this repo. These assistants read this file automatically
 > — keep it accurate, it is load-bearing.
 
+# Agent instructions for this repo
+
+You are dedicated to this repository only.
+
 ## What we're building
 
 PeerPet is a **digital pet that lives in the background of your terminal**. It
@@ -31,9 +35,13 @@ LLM, no AI, no external services, no network.** Don't add AI to the product.
 
 ## Architecture
 
-A **PTY host** owns the screen: it runs the user's real shell inside a
-pseudo-terminal and reserves the bottom N rows (a DECSTBM scroll region) for the
-pet, so the shell stays fully usable above it.
+A **PTY host** owns the screen. It spawns the user's real shell inside a
+pseudo-terminal (like `tmux`/`script`), reserves the bottom N rows with a
+DECSTBM scroll region (`ESC[<top>;<bottom>r`), and animates the pet in those
+rows (right-aligned, bottom-right) independently of the shell — saving/restoring the
+cursor (`ESC7`/`ESC8`) around every draw so the user's input line is never disturbed.
+The strip defaults to the bottom so the region's top margin stays at row 1, which
+preserves the terminal's native scrollback; `pet_position = "top"` is also supported.
 
 The full component map, data flow, and the reasoning behind each design choice
 live in [`ARCHITECTURE.md`](./ARCHITECTURE.md). Keep it in sync when you change

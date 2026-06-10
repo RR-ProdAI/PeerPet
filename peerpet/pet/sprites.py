@@ -62,11 +62,12 @@ REACTIONS: dict[str, list[str]] = {
         _face("ᕦᕤ", "^", "ω", "^"),
         _face("ᕦᕤ", "◕", "‿", "◕"),
     ],
-    # wave: arms swing up (ヽ ﾉ) and back
+    # wave: arms swing up (ᕗ ᕖ) and back to rest. Must stay 7 cols wide like
+    # every other frame — earlier `ヽ`/`ﾉ` were 2-col/1-col and made the pet jump.
     "play": [
-        "\n".join([_TOP, "ヽ(◕‿◕)ﾉ", _BOT]),
+        _face("ᕗᕖ", "◕", "‿", "◕"),
         HAPPY_REST,
-        "\n".join([_TOP, "ヽ(◕ᴗ◕)ﾉ", _BOT]),
+        _face("ᕗᕖ", "◕", "ᴗ", "◕"),
         HAPPY_REST,
     ],
     # affection: hearts pop above the head

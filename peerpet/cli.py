@@ -59,6 +59,7 @@ def _cmd_config(_: argparse.Namespace) -> int:
                 "socket_path": str(ipc.socket_path()),
                 "pet_name": cfg.pet_name,
                 "pet_rows": cfg.pet_rows,
+                "pet_position": cfg.pet_position,
                 "tick_interval": cfg.tick_interval,
                 "shell": cfg.resolved_shell,
             },
