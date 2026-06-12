@@ -299,7 +299,17 @@ def run(config: Config | None = None) -> int:
                     )
                 if image != last_image:
                     draw = region.save_cursor() + _wipe_strip(top, pet_rows)
-                    draw += image + region.restore_cursor()
+                    if pixels:
+                        # VT340 semantics (Windows Terminal 1.22+): sixel
+                        # images are CLIPPED to the DECSTBM margins, and the
+                        # strip lies below them — release the region for the
+                        # draw and re-apply it, all in this one write, so the
+                        # shell never observes the margins moving.
+                        draw += region.reset_scroll_region() + image
+                        draw += region.reserve_bottom(rows, pet_rows)
+                    else:
+                        draw += image
+                    draw += region.restore_cursor()
                     os.write(stdout_fd, draw.encode())
                     last_image = image
                     draws += 1
