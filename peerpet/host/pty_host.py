@@ -57,8 +57,23 @@ SAVE_INTERVAL = 30.0
 # Minimum strip height: the pixel pet needs ~2 rows at scale 1; 4 gives scale 2
 # on a typical 20px cell. The text mascot needs 3 sprite rows + a status line.
 MIN_PET_ROWS = 4
-# Below this many total rows the strip is suspended (shell gets everything).
-MIN_TOTAL_ROWS = MIN_PET_ROWS + 6
+# The shell keeps at least this many rows; shorter windows suspend the strip.
+MIN_SHELL_ROWS = 6
+
+
+def _make_debug(path: str | None):
+    """Optional host event log: set PEERPET_DEBUG=<file> to record probe
+    results, geometry, draws, and exit paths — the host owns the screen, so
+    this is the only way to see what it did after the fact."""
+    if not path:
+        return lambda msg: None
+    f = open(path, "a", buffering=1)
+    f.write(f"\n--- peerpet run pid={os.getpid()} {time.strftime('%F %T')} ---\n")
+
+    def dbg(msg: str) -> None:
+        f.write(f"{time.monotonic():.3f} {msg}\n")
+
+    return dbg
 
 
 class OutputTracker:
@@ -132,6 +147,7 @@ def run(config: Config | None = None) -> int:
         print("peerpet run: needs a real terminal", file=sys.stderr)
         return 1
 
+    dbg = _make_debug(os.environ.get("PEERPET_DEBUG"))
     config = config or Config.load()
     memory = get_memory()
     key = current_memory_key()
@@ -141,10 +157,12 @@ def run(config: Config | None = None) -> int:
     pixels = termcaps.supports_sixel()
     cell = termcaps.cell_pixel_size()
     pet_rows = max(config.pet_rows, MIN_PET_ROWS)
+    dbg(f"sixel={pixels} cell={cell} pet_rows={pet_rows} shell={config.resolved_shell}")
     if pixels:
         animator = Animator(library=pixel_sprites)
         sample = renderer.compose_pixel(state, animator.current_sprite(state.mood))
         scale, _, image_cols = pixel_layout(cell, pet_rows, sample)
+        dbg(f"layout scale={scale} image_cols={image_cols}")
     else:
         animator = Animator(library=sprites)
         scale = image_cols = 0  # unused on the text path
@@ -183,11 +201,12 @@ def run(config: Config | None = None) -> int:
     cleaned = False
 
     def cleanup() -> None:
-        """Idempotent: runs from finally, atexit, and SIGTERM."""
+        """Idempotent: runs from finally, atexit, and SIGTERM/SIGHUP."""
         nonlocal cleaned
         if cleaned:
             return
         cleaned = True
+        dbg("cleanup: restoring terminal, saving pet")
         try:
             termios.tcsetattr(stdin_fd, termios.TCSADRAIN, old_attrs)
         except termios.error:
@@ -205,13 +224,17 @@ def run(config: Config | None = None) -> int:
         memory.close()
 
     atexit.register(cleanup)
+    # SIGHUP is what a closing terminal tab sends: without a handler the host
+    # dies before cleanup and leaves the socket (and pet state) behind.
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+    signal.signal(signal.SIGHUP, lambda *_: sys.exit(0))
     resized = [True]  # start dirty: first pass sets up the region + child size
     signal.signal(signal.SIGWINCH, lambda *_: resized.__setitem__(0, True))
 
     last_image: str | None = None
     next_save = time.monotonic() + SAVE_INTERVAL
     exit_code = 0
+    draws = 0
     try:
         tty.setraw(stdin_fd)
         while True:
@@ -219,7 +242,7 @@ def run(config: Config | None = None) -> int:
                 resized[0] = False
                 size = os.get_terminal_size(stdout_fd)
                 rows, cols = size.lines, size.columns
-                if rows >= MIN_TOTAL_ROWS:
+                if rows >= pet_rows + MIN_SHELL_ROWS:
                     strip_active = True
                     _set_child_winsize(master, rows - pet_rows, cols)
                     os.write(stdout_fd, region.reserve_bottom(rows, pet_rows).encode())
@@ -227,6 +250,7 @@ def run(config: Config | None = None) -> int:
                     strip_active = False
                     _set_child_winsize(master, rows, cols)
                     os.write(stdout_fd, region.reset_scroll_region().encode())
+                dbg(f"geometry rows={rows} cols={cols} strip_active={strip_active}")
                 last_image = None  # force a repaint at the new geometry
 
             readable, _, _ = select.select([stdin_fd, master, ipc_sock], [], [], 0.1)
@@ -278,15 +302,23 @@ def run(config: Config | None = None) -> int:
                     draw += image + region.restore_cursor()
                     os.write(stdout_fd, draw.encode())
                     last_image = image
+                    draws += 1
+                    if draws in (1, 10) or draws % 100 == 0:
+                        dbg(f"draw #{draws} at row {top} col {col} (alt={tracker.alt_active})")
 
             now = time.monotonic()
             if now >= next_save:
                 memory.save(key, state)
                 next_save = now + SAVE_INTERVAL
 
+        dbg("child shell ended (EOF/EIO on master)")
         _, status = os.waitpid(pid, 0)
         code = os.waitstatus_to_exitcode(status)
         exit_code = code if code >= 0 else 128 - code  # signal -> shell-style code
+    except BaseException as e:
+        dbg(f"exiting on {type(e).__name__}: {e}")
+        raise
     finally:
         cleanup()
+    dbg(f"done, exit_code={exit_code}")
     return exit_code
