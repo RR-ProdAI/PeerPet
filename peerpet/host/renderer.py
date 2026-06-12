@@ -15,6 +15,7 @@ from __future__ import annotations
 import sys
 
 from peerpet.host import region
+from peerpet.pet import pixel_sprites
 from peerpet.pet.state import PetState
 
 
@@ -42,6 +43,14 @@ def compose_lines(state: PetState, sprite: str) -> list[str]:
     draws them. Used by the multi-line demo/host renderers.
     """
     return sprite.split("\n") + [_status(state)]
+
+
+def compose_pixel(state: PetState, sprite: list[str]) -> list[str]:
+    """Pixel composition: the sprite frame, a transparent spacer row, and the
+    stat-bar HUD, as one rectangular grid ready for `sixel.encode`. The pixel
+    twin of `compose_lines` — used by both `peerpet demo` and the host."""
+    spacer = "." * pixel_sprites.WIDTH
+    return sprite + [spacer] + pixel_sprites.hud(state.happiness, state.hunger)
 
 
 def draw(state: PetState, sprite: str, row: int, out=sys.stdout) -> None:
