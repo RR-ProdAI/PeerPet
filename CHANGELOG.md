@@ -14,6 +14,14 @@ release, rename `[Unreleased]` to the new version with the date and start a fres
 ## [Unreleased]
 
 ### Added
+- **`peerpet run` is implemented** (`host/pty_host.py`): launches your real
+  shell in a PTY with the pet animating in a reserved bottom strip
+  (right-aligned, sixel pixel art with text fallback). The shell stays fully
+  usable: DECSTBM keeps output above the strip, `feed`/`play`/`pet` arrive over
+  the IPC socket and trigger reactions live, the pet pauses while full-screen
+  apps hold the alternate screen and repaints after clears, SIGWINCH resizes
+  the child and re-reserves the strip (suspending it entirely on very short
+  terminals), and every exit path restores the terminal and persists the pet.
 - **Pixel-art pet over sixel graphics**: on terminals that support sixel
   (Windows Terminal ≥ 1.22, xterm, foot…), `peerpet demo` now renders a real
   Tamagotchi-style pixel creature — composed body with shading/outline, big

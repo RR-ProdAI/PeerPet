@@ -66,7 +66,7 @@ uv venv && uv pip install -e ".[dev]"          # recommended
 python3 -m venv .venv && . .venv/bin/activate && pip install -e ".[dev]"
 
 peerpet status          # print pet state as JSON (no host / TTY needed)
-peerpet run             # launch a shell with the pet (MVP target, WIP)
+peerpet run             # launch a shell with the pet in the bottom strip
 peerpet demo            # preview the animation (pixel art on sixel terminals)
 peerpet feed            # interact from another pane/window
 pytest                  # tests

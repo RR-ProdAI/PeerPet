@@ -110,10 +110,8 @@ def _run_text(state: PetState, out) -> int:
 
 
 def _pixel_frame(state: PetState, animator: Animator) -> list[str]:
-    """One full pixel grid for this tick: sprite + a spacer + the stat bars."""
-    sprite = animator.current_sprite(state.mood)
-    spacer = "." * pixel_sprites.WIDTH
-    return sprite + [spacer] + pixel_sprites.hud(state.happiness, state.hunger)
+    """One full pixel grid for this tick: sprite + spacer + stat bars."""
+    return renderer.compose_pixel(state, animator.current_sprite(state.mood))
 
 
 def _run_sixel(state: PetState, out) -> int:
