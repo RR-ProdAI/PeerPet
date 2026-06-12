@@ -14,6 +14,21 @@ release, rename `[Unreleased]` to the new version with the date and start a fres
 ## [Unreleased]
 
 ### Added
+- **Pixel-art pet over sixel graphics**: on terminals that support sixel
+  (Windows Terminal ≥ 1.22, xterm, foot…), `peerpet demo` now renders a real
+  Tamagotchi-style pixel creature — composed body with shading/outline, big
+  glinting eyes, blush, idle bob + blink, feed/play/pet reaction scenes (snack,
+  bouncing ball, hearts) — plus pixel stat bars for happiness and hunger. New
+  modules: `pet/pixel_sprites.py` (art + palette + HUD), `host/sixel.py`
+  (stdlib sixel encoder), `host/termcaps.py` (runtime sixel/cell-size
+  detection). Terminals without sixel keep the Unicode mascot; non-TTY output
+  keeps the static frame. `Animator` now accepts a pluggable sprite library.
+- Dev preview tool `tools/preview_frames.py`: renders every animation frame to
+  a PNG contact sheet (stdlib PNG writer) for iterating on pixel art without a
+  sixel terminal.
+- `docs/SHARED_STATE_PLAN.md`: future design for sharing pet stats between
+  users (local-first sync behind the `memory.Memory` boundary; backend/database
+  choice explicitly deferred).
 - Versioning & release system: single-sourced version (`peerpet/__init__.py`),
   this changelog, and a tag-triggered GitHub Release workflow.
 - Pet animation engine (`pet/animation.py`): an `Animator` that picks each frame

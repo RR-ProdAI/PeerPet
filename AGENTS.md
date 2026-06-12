@@ -46,11 +46,15 @@ the shape of the code.
 - **Format/lint:** `ruff format` + `ruff check`. Run before every commit.
 - **No global mutable state** except the single host instance. Pass `state`
   explicitly.
-- **Terminal writes go through `host/region.py` only.** Nothing else writes raw
-  escape codes — this keeps cursor accounting in one place.
+- **Escape sequences are built in exactly two places:** `host/region.py`
+  (cursor/region control) and `host/sixel.py` (sixel pixel images). Both are
+  pure string builders; nothing else constructs raw escape codes — this keeps
+  cursor accounting in one place.
 - **All persistence goes through the `memory.Memory` interface.** Never import a
   concrete backend outside `memory/`; storage stays swappable and local-only.
-- **Keep sprites in `sprites.py`,** not inline in logic. One dict: mood → frames.
+- **Keep art in the sprite modules,** not inline in logic. One dict: mood →
+  frames. Text art lives in `pet/sprites.py`; pixel art (the sixel pet) in
+  `pet/pixel_sprites.py` — preview it with `python tools/preview_frames.py`.
 - **Tests:** `pytest`. The terminal layer is hard to unit-test; cover `pet/` and
   `memory/` well, and test `region.py` escape-sequence output as strings.
 
@@ -63,6 +67,7 @@ python3 -m venv .venv && . .venv/bin/activate && pip install -e ".[dev]"
 
 peerpet status          # print pet state as JSON (no host / TTY needed)
 peerpet run             # launch a shell with the pet (MVP target, WIP)
+peerpet demo            # preview the animation (pixel art on sixel terminals)
 peerpet feed            # interact from another pane/window
 pytest                  # tests
 ruff format . && ruff check .

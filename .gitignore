@@ -20,6 +20,9 @@ env/
 .DS_Store
 *.swp
 
+# Generated art previews (tools/preview_frames.py)
+tools/*.png
+
 # PeerPet runtime data (never commit a user's pet/memory)
 *.db
 *.sqlite3

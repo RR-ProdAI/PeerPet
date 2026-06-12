@@ -59,12 +59,15 @@ which is exactly why we chose it over a floating overlay window (see decisions).
 peerpet/
   host/        owns the terminal
     pty_host.py   spawn shell in a PTY, relay IO, handle SIGWINCH, clean teardown
-    region.py     DECSTBM scroll-region + cursor primitives (only writer of ANSI)
+    region.py     DECSTBM scroll-region + cursor primitives (escape builder #1)
+    sixel.py      pixel images as sixel sequences (escape builder #2, stdlib)
+    termcaps.py   capability probes: sixel support (DA1), cell pixel size
     renderer.py   compose + draw a pet frame into the reserved rows
   pet/         the (deterministic) brain
     state.py      data model: hunger/energy/happiness/mood/xp/level/last_seen
     behavior.py   tick (time-based decay) + apply_command (feed/play/pet)
-    sprites.py    ASCII/Unicode frames per mood (all art lives here)
+    sprites.py    Unicode text frames per mood (fallback art)
+    pixel_sprites.py  pixel-art frames + palette + stat-bar HUD (primary art)
   interaction/ out-of-band, non-blocking
     ipc.py        unix-socket server (host) + client (cli)
     commands.py   feed/play/pet handlers, bound to a Memory backend
@@ -113,14 +116,22 @@ peerpet/
 4. **Deterministic — no AI in the product.** Pet behavior is a plain state
    machine. No LLM, no network, no API keys. This keeps it lightweight, private,
    predictable, and testable.
-5. **One ANSI writer.** Only `host/region.py` emits raw escape sequences, so
-   cursor accounting lives in one place and is unit-testable as strings.
+5. **Two escape builders, nothing more.** `host/region.py` (cursor/region
+   control) and `host/sixel.py` (pixel images) are the only modules that
+   construct raw escape sequences. Both are pure string builders, so cursor
+   accounting lives in one place and everything is unit-testable as strings.
 6. **Memory behind an interface.** All persistence goes through `memory.Memory`;
    `local.py` (SQLite, keyed by OS user) is the implementation. The boundary lets
    us swap storage later without touching the pet — but it stays plain local
    storage, no external service.
 7. **Out-of-band interaction.** Commands travel over a unix socket, not the
    shell's stdin, so the prompt is never blocked or intercepted.
+8. **Pixel art over sixel, with a text fallback.** The pet renders as real
+   pixel graphics (Tamagotchi-style sprite + stat bars) on terminals that
+   advertise sixel support (DA1 attribute 4 — Windows Terminal ≥ 1.22, xterm,
+   foot…), detected at runtime by `host/termcaps.py`. Terminals without it get
+   the Unicode mascot, and non-TTY output gets a single static frame — the pet
+   degrades gracefully instead of requiring a graphics terminal.
 
 ## Non-goals
 

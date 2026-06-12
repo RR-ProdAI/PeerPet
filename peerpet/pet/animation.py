@@ -28,17 +28,30 @@ IDLE_FRAME_INTERVAL = 0.5
 REACTION_FRAME_INTERVAL = 0.25
 
 
+# A frame is whatever the sprite library yields: a string of text-art rows
+# (`pet.sprites`) or a list of pixel rows (`pet.pixel_sprites`).
+Frame = str | list[str]
+
+
 class Animator:
     """Stateful frame picker for one pet.
 
     Holds only animation timing state (when the current reaction started); the
     pet's mood is passed in on each call so this never duplicates the pet model.
+    The timing logic is sprite-format agnostic: `library` is any module/object
+    with `frame_for(mood, tick)` and `reaction_frames(command)` — text art by
+    default, `pet.pixel_sprites` for the sixel pet.
     """
 
-    def __init__(self, clock: Callable[[], float] = time.monotonic) -> None:
+    def __init__(
+        self,
+        clock: Callable[[], float] = time.monotonic,
+        library=sprites,
+    ) -> None:
         self._clock = clock
+        self._library = library
         self._start = clock()
-        self._reaction: list[str] = []
+        self._reaction: list[Frame] = []
         self._reaction_start: float | None = None
 
     def _now(self, now: float | None) -> float:
@@ -47,7 +60,7 @@ class Animator:
     def trigger(self, command: str, now: float | None = None) -> None:
         """Start a one-shot reaction for `command`. Unknown commands are ignored
         (no frames), leaving the pet on its idle animation."""
-        frames = sprites.reaction_frames(command)
+        frames = self._library.reaction_frames(command)
         if not frames:
             return
         self._reaction = frames
@@ -60,7 +73,7 @@ class Animator:
         elapsed = self._now(now) - self._reaction_start
         return elapsed < len(self._reaction) * REACTION_FRAME_INTERVAL
 
-    def current_sprite(self, mood: Mood, now: float | None = None) -> str:
+    def current_sprite(self, mood: Mood, now: float | None = None) -> Frame:
         """The sprite string to draw right now.
 
         A live reaction overrides the idle loop; otherwise the mood's idle
@@ -77,4 +90,4 @@ class Animator:
             self._reaction_start = None
 
         idle_tick = int((now - self._start) / IDLE_FRAME_INTERVAL)
-        return sprites.frame_for(mood, idle_tick)
+        return self._library.frame_for(mood, idle_tick)

@@ -1,4 +1,4 @@
-from peerpet.pet import sprites
+from peerpet.pet import pixel_sprites, sprites
 from peerpet.pet.animation import (
     IDLE_FRAME_INTERVAL,
     REACTION_FRAME_INTERVAL,
@@ -61,3 +61,16 @@ def test_unknown_command_does_not_react():
     anim.trigger("explode")
     assert not anim.is_reacting()
     assert anim.current_sprite(Mood.CONTENT) in sprites.FRAMES[Mood.CONTENT]
+
+
+def test_animator_drives_pixel_sprite_library():
+    # Same timing engine, different sprite format: frames come from the
+    # injected library, not the default text art.
+    clock = FakeClock()
+    anim = Animator(clock=clock, library=pixel_sprites)
+    assert anim.current_sprite(Mood.HAPPY) in pixel_sprites.FRAMES[Mood.HAPPY]
+    anim.trigger("feed")
+    assert anim.current_sprite(Mood.HAPPY) == pixel_sprites.reaction_frames("feed")[0]
+    clock.t = len(pixel_sprites.reaction_frames("feed")) * REACTION_FRAME_INTERVAL
+    assert not anim.is_reacting()
+    assert anim.current_sprite(Mood.SAD) in pixel_sprites.FRAMES[Mood.SAD]
